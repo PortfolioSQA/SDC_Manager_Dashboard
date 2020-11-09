@@ -1,0 +1,9 @@
+dash
+dash-bootstrap-components
+dash_core_components
+dash_table
+cookiecutter
+pandas
+random
+plotly.express
+plotly.graph_objects
