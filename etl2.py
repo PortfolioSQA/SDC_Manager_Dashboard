@@ -28,12 +28,12 @@ def load_data(harvest_db, rel_ident):
     size = df1.shape
     inactive_num = int(0.10 * size[0])
     active_num = int(0.90 * size[0])
-    my_list = [0] * inactive_num + [1] * active_num
+    my_list = ['Inactive'] * inactive_num + ['Active'] * active_num
     random.shuffle(my_list)
     if size[0] == len(my_list):    
         df1['status'] = my_list
     else:
-        my_list = [1] + my_list
+        my_list = ['Active'] + my_list
         df1['status'] = my_list
         
     #join df1 and citation count
@@ -41,6 +41,4 @@ def load_data(harvest_db, rel_ident):
     result.citations.fillna(0, inplace = True)
     result.datasource.fillna('Unknown', inplace = True)
 
-    
     return result
-

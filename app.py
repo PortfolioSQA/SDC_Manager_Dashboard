@@ -21,7 +21,8 @@ a = pd.read_csv('harvest_database_example.csv', index_col = 'file_identifier')
 b = pd.read_csv('related_identifiers_example.csv')
 
 df = load_data(a, b)
-df['datasource'] = df['datasource'].fillna('Unknown')
+#this doesn't work in the etl script for some reason
+df.datasource.fillna('Unknown', inplace = True)
 
 # get a set of sorted science centers for dropdown menu
 SC = set(df['datasource'])
@@ -213,7 +214,9 @@ row = html.Div(
                                             },
                                         options= [{'label': 'All Science Centers', 'value': 'All'}] + [{'label': str(item),'value': str(item)}
                                                   for item in sorted_SC],
-                                        value= 'All'),
+                                        value= 'All',
+                                        persistence=True, 
+                                        persistence_type = 'memory'),
                             html.P(),
                             html.Br(),                           
                             dbc.FormGroup(
@@ -293,7 +296,7 @@ row = html.Div(
                         html.Div(
                             [
                                 html.H3("Total Data Published"),
-                                html.Div(dcc.Loading(id='loading-3',
+                                html.Div(dcc.Loading(id='loading-1',
                                                    children=
                                                    html.Div(html.Div(id='live-update-text'), className="explore-sb-row-h2",))
                                        , className="textHeader"),
@@ -308,7 +311,7 @@ row = html.Div(
                         html.Div(
                             [
                                 html.H3("Total Active"),
-                                html.Div(dcc.Loading(id='loading-5',
+                                html.Div(dcc.Loading(id='loading-2',
                                                    children=
                                                    html.Div(html.Div(id='live-update-text3'), className="explore-sb-row-h2",))
                                        , className="textHeader"),
@@ -341,6 +344,8 @@ app.layout = html.Div(
                     value="tab-1",
                     parent_className="custom-tabs",
                     className="custom-tabs-container",
+                    persistence = True,
+                    persistence_type = 'memory',
                     children=[
                         dcc.Tab(
                             label="Datatable",
@@ -372,8 +377,6 @@ app.layout = html.Div(
 # END Layout for Select a Date Range
 
 
-value_counts = df.status.value_counts()
-
 
 @app.callback(
     Output("tabs-content-classes", "children"), [Input("tabs-with-classes", "value")]
@@ -382,6 +385,12 @@ def render_content(tab):
     if tab == "tab-1":
         return html.Div(
             [
+                html.Div(dcc.Loading(id='loading-3',
+                   children=
+                   html.Div(html.Div(id='live-update-text5'), className="explore-sb-row-h2",
+                            )
+                   ), className="center-date-range-text"
+                         ),
                 html.H4("Science Data Catalog Results", className="align-left"),
                 html.A(
                     "Download Data Table (CSV)", id = 'download-button',
@@ -390,10 +399,12 @@ def render_content(tab):
                     target='_blank',
                     # className="align-right",
                 ),
-                dcc.Loading(id='loading-2',
+                dcc.Loading(id='loading-4',
                         children=[html.Div(
                 dash_table.DataTable(
                     id='datatable',
+                    persistence = True, 
+                    persistence_type = 'memory',
                     data=df.to_dict('records'),
                     columns=[
                     {"name": ["Status"], "id": "status"},
@@ -435,18 +446,18 @@ def render_content(tab):
                     sort_mode="multi",
                     )
                 )], type = "default"),
-                dcc.Link(
-                    "Learn more about how these metrics are calculated.",
-                    href="#",
-                    className="learn-more-link align-left",
-                ),
-            ]
+                # dcc.Link(
+                #     "Learn more about how these metrics are calculated.",
+                #     href="#",
+                #     className="learn-more-link align-left",
+                # ),
+            ],
         )
     elif tab == "tab-2":
         return html.Div(
             [
                 # html.P("Science Centers", className="center-date-range-text"),
-                html.Div(dcc.Loading(id='loading-4',
+                html.Div(dcc.Loading(id='loading-5',
                    children=
                    html.Div(html.Div(id='live-update-text2'), className="explore-sb-row-h2",
                             )
@@ -463,6 +474,12 @@ def render_content(tab):
     elif tab == "tab-3":
         return html.Div(
             [
+                html.Div(dcc.Loading(id='loading-6',
+                   children=
+                   html.Div(html.Div(id='live-update-text4'), className="explore-sb-row-h2",
+                            )
+                   ), className="center-date-range-text"
+                         ),
                 html.H4("Release by Date"),
                 dcc.Graph(
                     id="example-graph-2",
@@ -474,10 +491,6 @@ def render_content(tab):
 #function to filter data for table
 def filter_data(sci_center, status, date_type, startdate, enddate):
     df1 = df.copy()
-    startdate = dt.strptime(startdate, '%Y-%m-%d')
-    startdate = startdate.replace(tzinfo=tz.gettz('UTC'))
-    enddate = dt.strptime(enddate, '%Y-%m-%d')
-    enddate = enddate.replace(tzinfo=tz.gettz('UTC'))
     #filter by date
     if date_type == 'beg_date':
         df1 = df1.reset_index().set_index('last_harvest_date')
@@ -502,9 +515,9 @@ def filter_data(sci_center, status, date_type, startdate, enddate):
     elif sci_center == 'All' and status != 'all_status':
         df2 = df1.copy()
         if status == 'active':
-            df2 = df2[df2['status']==1]
+            df2 = df2[df2['status']=='Active']
         if status == 'inactive':
-            df2 = df2[df2['status']==0]
+            df2 = df2[df2['status']=='Inactive']
         return df2
     elif sci_center != 'All' and status == 'all_status':
         df2 = df1.copy()
@@ -514,10 +527,11 @@ def filter_data(sci_center, status, date_type, startdate, enddate):
         df2 = df1.copy()
         df2 = df2[df2['datasource']==sci_center]
         if status == 'active':
-            df2 = df2[df2['status']==1]
+            df2 = df2[df2['status']=='Active']
         if status == 'inactive':
-            df2 = df2[df2['status']==0]
+            df2 = df2[df2['status']=='Inactive']
         return df2
+
 
 #return table count
 @app.callback(
@@ -535,7 +549,7 @@ def set_display_livedata(sci_center, status, date_type,  startd, endd):
     else:
         return len(df3)
 
-#return table count
+#return Active table count
 @app.callback(
     Output('live-update-text3', 'children'),
     [Input('sci_center', 'value'),
@@ -549,9 +563,10 @@ def set_display_livedata2(sci_center, status, date_type,  startd, endd):
     if df3 is None:
         return 0
     else:
-        return len(df3[df3.status == 1])
+        return len(df3[df3.status == 'Active'])
     
-#update table    
+
+#update datatable    
 @app.callback(
     Output('datatable', 'data'),
     [Input('sci_center', 'value'),
@@ -614,12 +629,27 @@ def time_series(sci_center, status, date_type,  startd, endd):
     figure = px.bar(dfg, x=dfg.index, y="Count")
     return figure
 
-# update science center text
+# update science center text tab 1
+@app.callback(
+    Output('live-update-text5', 'children'),
+    [Input('sci_center', 'value'),])
+def new_text5(value):
+    return value
+
+# update science center text tab 2
 @app.callback(
     Output('live-update-text2', 'children'),
     [Input('sci_center', 'value'),])
-def new_text(value):
+def new_text2(value):
     return value
+
+# update science center text tab 3
+@app.callback(
+    Output('live-update-text4', 'children'),
+    [Input('sci_center', 'value'),])
+def new_text4(value):
+    return value
+
 
 if __name__ == "__main__":
     app.run_server(debug=True)
