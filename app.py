@@ -2,7 +2,7 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
-
+import flask
 
 import dash_bootstrap_components as dbc
 import dash_table
@@ -39,8 +39,14 @@ dfg = dfg.rename(columns={"datasource": "Count"})
 
 
 ################
+
+server = flask.Flask('app')
+
 external_stylesheets = [dbc.themes.BOOTSTRAP]
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+server = app.server
+app.config['suppress_callback_exceptions'] = True
+
 
 # USGS & ScienceBase Headers and Footers
 app.index_string = """
@@ -209,14 +215,15 @@ row = html.Div(
                                         style={
                                             'height': '2px', 
                                             # 'width': '100px', 
-                                            'font-size': "75%",
+                                            'font-size': "90%",
                                             'min-height': '1px',
                                             },
                                         options= [{'label': 'All Science Centers', 'value': 'All'}] + [{'label': str(item),'value': str(item)}
                                                   for item in sorted_SC],
                                         value= 'All',
-                                        persistence=True, 
-                                        persistence_type = 'memory'),
+                                        # persistence=True, 
+                                        # persistence_type = 'memory'
+                                        ),
                             html.P(),
                             html.Br(),                           
                             dbc.FormGroup(
@@ -344,8 +351,8 @@ app.layout = html.Div(
                     value="tab-1",
                     parent_className="custom-tabs",
                     className="custom-tabs-container",
-                    persistence = True,
-                    persistence_type = 'memory',
+                    # persistence = True,
+                    # persistence_type = 'memory',
                     children=[
                         dcc.Tab(
                             label="Datatable",
@@ -403,8 +410,8 @@ def render_content(tab):
                         children=[html.Div(
                 dash_table.DataTable(
                     id='datatable',
-                    persistence = True, 
-                    persistence_type = 'memory',
+                    # persistence = True, 
+                    # persistence_type = 'memory',
                     data=df.to_dict('records'),
                     columns=[
                     {"name": ["Status"], "id": "status"},
@@ -565,7 +572,6 @@ def set_display_livedata2(sci_center, status, date_type,  startd, endd):
     else:
         return len(df3[df3.status == 'Active'])
     
-
 #update datatable    
 @app.callback(
     Output('datatable', 'data'),
@@ -633,7 +639,9 @@ def time_series(sci_center, status, date_type,  startd, endd):
 @app.callback(
     Output('live-update-text5', 'children'),
     [Input('sci_center', 'value'),])
-def new_text5(value):
+def new_text1(value):
+    if value == "All":
+        return "All Science Centers"
     return value
 
 # update science center text tab 2
@@ -641,13 +649,17 @@ def new_text5(value):
     Output('live-update-text2', 'children'),
     [Input('sci_center', 'value'),])
 def new_text2(value):
+    if value == "All":
+        return "All Science Centers"
     return value
 
 # update science center text tab 3
 @app.callback(
     Output('live-update-text4', 'children'),
     [Input('sci_center', 'value'),])
-def new_text4(value):
+def new_text3(value):
+    if value == "All":
+        return "All Science Centers"
     return value
 
 
