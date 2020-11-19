@@ -410,8 +410,6 @@ def render_content(tab):
                         children=[html.Div(
                 dash_table.DataTable(
                     id='datatable',
-                    # persistence = True, 
-                    # persistence_type = 'memory',
                     data=df.to_dict('records'),
                     columns=[
                     {"name": ["Status"], "id": "status"},
@@ -421,14 +419,17 @@ def render_content(tab):
                     ],
                     style_cell_conditional=[
                         {'if': {'column_id': 'status'},
-                          'width': '8%',
-                          'textAlign': 'left'},
+                          'width': '100px',
+                          'textAlign': 'right'},
                         {'if': {'column_id': 'citations'},
-                          'width': '10%',
+                          'width': '110px',
                           'textAlign': 'center'},
                         {'if': {'column_id': 'datasource'},
-                          'width': '60%',
-                          'textAlign': 'left'},
+                          'width': '500px',
+                          'textAlign': 'center'},
+                        {'if': {'column_id': 'doi'},
+                          'width': '200px',
+                          'textAlign': 'center'},
                     ],
                     style_header= {
                         'whiteSpace':'normal',
@@ -444,13 +445,13 @@ def render_content(tab):
                         'maxHeight': '600px',
                         'overflowY': 'scroll'
                     },
-                        style_data={
+                    style_data={
                         'whiteSpace': 'normal',
                         'height': 'auto',
                         'lineHeight': '15px'
                     },
                     sort_action="native",
-                    sort_mode="multi",
+                    # sort_mode="multi",
                     )
                 )], type = "default"),
                 # dcc.Link(
