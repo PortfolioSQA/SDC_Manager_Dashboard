@@ -5,4 +5,3 @@ dash_table
 cookiecutter
 pandas
 plotly.express
-plotly.graph_objects
