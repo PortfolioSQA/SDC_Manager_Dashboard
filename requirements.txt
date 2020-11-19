@@ -5,3 +5,4 @@ dash_table
 cookiecutter
 pandas
 plotly.express
+gunicorn
