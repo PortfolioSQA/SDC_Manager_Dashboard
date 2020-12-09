@@ -17,7 +17,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 # sample data
-df = pd.read_csv('/Users/sashaqanderson/SDC_Manager_Dashboard/final_df.csv', index_col = 'file_identifier')
+df = pd.read_csv('final_df.csv', index_col = 'file_identifier')
 
 #this doesn't work in the etl script for some reason
 df.datasource.fillna('Unknown', inplace = True)
