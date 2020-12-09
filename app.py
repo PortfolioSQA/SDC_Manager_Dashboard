@@ -17,10 +17,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 # sample data
-a = pd.read_csv('harvest_database_example.csv', index_col = 'file_identifier')
-b = pd.read_csv('related_identifiers_example.csv')
+df = pd.read_csv('/Users/sashaqanderson/SDC_Manager_Dashboard/final_df.csv', index_col = 'file_identifier')
 
-df = load_data(a, b)
 #this doesn't work in the etl script for some reason
 df.datasource.fillna('Unknown', inplace = True)
 
@@ -31,10 +29,10 @@ sorted_SC = sorted(SC)
 #used for default pie chart
 value_counts = df.status.value_counts()
 
-#used to plot the releases over time
+# #used to plot the releases over time
 df1 = df.copy()
-df1.mdate = pd.to_datetime(df1.mdate)
-dfg = df1.groupby('mdate').count()
+df1.last_update = pd.to_datetime(df1.last_update)
+dfg = df1.groupby(pd.Grouper(key='last_update', freq='1M')).count()
 dfg = dfg.rename(columns={"datasource": "Count"})
 
 
@@ -259,8 +257,8 @@ row = html.Div(
                                         options=[
                                             {"label": "Beginning Date", "value": 'beg_date'},
                                             {"label": "End Date", "value": 'end_date'},
-                                            {"label": "Last Updated", "value": 'mdate'},
-                                            {"label": "Last Harvest", "value": 'last_harv'},
+                                            {"label": "Last Updated", "value": 'last_update'},
+                                            {"label": "Last Harvest", "value": 'last_harvest'},
                                         ],
                                         style = {'font-size':'17px'},
                                         value='beg_date',
@@ -351,8 +349,6 @@ app.layout = html.Div(
                     value="tab-1",
                     parent_className="custom-tabs",
                     className="custom-tabs-container",
-                    # persistence = True,
-                    # persistence_type = 'memory',
                     children=[
                         dcc.Tab(
                             label="Datatable",
@@ -367,7 +363,7 @@ app.layout = html.Div(
                             selected_className="custom-tab--selected",
                         ),
                         dcc.Tab(
-                            label="Release by Date",
+                            label="By Date",
                             value="tab-3",
                             className="custom-tab",
                             selected_className="custom-tab--selected",
@@ -419,10 +415,10 @@ def render_content(tab):
                     ],
                     style_cell_conditional=[
                         {'if': {'column_id': 'status'},
-                          'width': '100px',
+                          'width': '80px',
                           'textAlign': 'right'},
                         {'if': {'column_id': 'citations'},
-                          'width': '110px',
+                          'width': '100px',
                           'textAlign': 'center'},
                         {'if': {'column_id': 'datasource'},
                           'width': '500px',
@@ -443,7 +439,8 @@ def render_content(tab):
                     },
                     style_table={
                         'maxHeight': '600px',
-                        'overflowY': 'scroll'
+                        'overflowY': 'scroll',
+                        'maxWidth': '97%'
                     },
                     style_data={
                         'whiteSpace': 'normal',
@@ -459,8 +456,10 @@ def render_content(tab):
                 #     href="#",
                 #     className="learn-more-link align-left",
                 # ),
-            ],
-        )
+            ],style = {
+                'padding': '10px'
+                }
+        ), 
     elif tab == "tab-2":
         return html.Div(
             [
@@ -488,7 +487,6 @@ def render_content(tab):
                             )
                    ), className="center-date-range-text"
                          ),
-                html.H4("Release by Date"),
                 dcc.Graph(
                     id="example-graph-2",
                     figure = px.bar(dfg, x=dfg.index, y="Count")
@@ -501,21 +499,25 @@ def filter_data(sci_center, status, date_type, startdate, enddate):
     df1 = df.copy()
     #filter by date
     if date_type == 'beg_date':
-        df1 = df1.reset_index().set_index('last_harvest_date')
+        df1 = df1.reset_index().set_index('beg_date')
         df1.index = pd.to_datetime(df1.index)
         df1 = df1.loc[startdate: enddate]  
+        df1['beg_date'] = df1.index    
     if date_type == 'end_date':
-        df1 = df1.reset_index().set_index('last_harvest_date')
+        df1 = df1.reset_index().set_index('end_date')
         df1.index = pd.to_datetime(df1.index)
         df1 = df1.loc[startdate: enddate] 
-    if date_type == 'mdate':
-        df1 = df1.reset_index().set_index('mdate')
+        df1['end_date'] = df1.index    
+    if date_type == 'last_update':
+        df1 = df1.reset_index().set_index('last_update')
         df1.index = pd.to_datetime(df1.index)
         df1 = df1.loc[startdate: enddate] 
-    if date_type == 'last_harv':
-        df1 = df1.reset_index().set_index('last_harvest_date')
+        df1['last_update'] = df1.index    
+    if date_type == 'last_harvest':
+        df1 = df1.reset_index().set_index('last_harvest')
         df1.index = pd.to_datetime(df1.index)
         df1 = df1.loc[startdate: enddate] 
+        df1['last_harvest'] = df1.index  
     df1 = df1.set_index('file_identifier')
     #filter by science center and status
     if sci_center == 'All' and status == 'all_status':
@@ -630,8 +632,9 @@ def pie_status(sci_center, status, date_type,  startd, endd):
       Input('date-picker-range', 'end_date')])
 def time_series(sci_center, status, date_type,  startd, endd):
     df7 = filter_data(sci_center, status, date_type, startd, endd)
-    df7.mdate = pd.to_datetime(df7.mdate)
-    dfg = df7.groupby('mdate').count()
+    df7[date_type] = pd.to_datetime(df7[date_type])
+    dfg = df7.groupby(pd.Grouper(key=date_type, freq='1M')).count()
+    # dfg = df7.groupby('last_update').count()
     dfg = dfg.rename(columns={"datasource": "Count"})
     figure = px.bar(dfg, x=dfg.index, y="Count")
     return figure
@@ -657,11 +660,20 @@ def new_text2(value):
 # update science center text tab 3
 @app.callback(
     Output('live-update-text4', 'children'),
-    [Input('sci_center', 'value'),])
-def new_text3(value):
-    if value == "All":
-        return "All Science Centers"
-    return value
+    [Input('sci_center', 'value'),
+     Input('date_type', 'value')])
+def new_text3(sc, dat):
+    if dat == 'beg_date':
+        d = "by Beginning Date"
+    if dat == 'end_date':
+        d = "by End Date"
+    if dat == 'last_update':
+        d = "by Last Updated Date"
+    if dat == 'last_harvest':
+        d = "by Last harvest Date"
+    if sc == "All":
+        return "All Science Centers " + d
+    return sc + ' ' + d
 
 
 if __name__ == "__main__":
