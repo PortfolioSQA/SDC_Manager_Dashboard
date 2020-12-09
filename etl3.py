@@ -40,7 +40,7 @@ def load_data(harvest_db, rel_ident):
     result = df1.merge(df3, how = 'left', left_index=True, right_index=True)
     result.citations.fillna(0, inplace = True)
     result.datasource.fillna('Unknown', inplace = True)
-    result.to_csv('/Users/sashaqanderson/SDC_Manager_Dashboard/final_df.csv', index=False)
+    result.to_csv('final_df.csv', index=False)
     result.columns = ['file_identifier', 'datasource', 'doi', 'beg_date',
        'end_date', 'last_update', 'last_harvest', 'status',
        'citations']
