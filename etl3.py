@@ -47,9 +47,9 @@ def load_data(harvest_db, rel_ident):
     return result
 
 if __name__ == "__main__":
-    df_pub = pd.read_csv('/Users/sashaqanderson/SDC_Manager_Dashboard/related_identifiers_example2.csv')
+    df_pub = pd.read_csv('related_identifiers_example2.csv')
     df_pub.set_index('metadata_identifier')
-    df_sc = pd.read_csv('/Users/sashaqanderson/SDC_Manager_Dashboard/harvest_database_example2.csv')
+    df_sc = pd.read_csv('harvest_database_example2.csv')
     df_sc.set_index('file_identifier')
     df = load_data(df_sc, df_pub)
     print(df.columns)
