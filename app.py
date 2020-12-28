@@ -7,12 +7,8 @@ import flask
 import dash_bootstrap_components as dbc
 import dash_table
 import pandas as pd
-from etl2 import load_data
 from datetime import date
 import urllib
-from dash.dash import no_update
-from datetime import datetime as dt
-from dateutil import tz
 import plotly.express as px
 import plotly.graph_objects as go
 
@@ -29,12 +25,13 @@ sorted_SC = sorted(SC)
 #used for default pie chart
 value_counts = df.status.value_counts()
 
-# #used to plot the releases over time
+# used to plot the releases over time
 df1 = df.copy()
-df1.last_update = pd.to_datetime(df1.last_update)
-dfg = df1.groupby(pd.Grouper(key='last_update', freq='1M')).count()
-dfg = dfg.rename(columns={"datasource": "Count"})
-
+df1.last_harvest = pd.to_datetime(df1.last_harvest)
+dfg2 = df1.set_index('last_harvest').groupby([pd.Grouper(freq='1W'), 'status']).count()
+dfg2 = dfg2[['datasource']]
+dfg2 = dfg2.rename(columns={"datasource": "Count"})
+dfg2.reset_index(inplace = True)
 
 ################
 
@@ -89,7 +86,7 @@ app.index_string = """
 	<div class="col-12">
 		<div class="nav-background clearIt">	
 		<nav class="navbar navbar-light">
-		<a class="sb navbar-brand" href="#"><img src="../assets/images/powered_by_sb.png" alt="Powered by SDC_Dashboard" /> Science Data Catalog Dash</a>
+		<a class="sb navbar-brand" href="#"><img src="../assets/images/powered_by_sb.png" alt="Powered by SDC_Dashboard" /> Science Data Catalog Discovery Dashboard</a>
 		</nav>	
 		</div>	
 	</div>
@@ -101,10 +98,9 @@ app.index_string = """
 		<!-- BEGIN SDC_Dashboard Image and Header Content -->
 		<div class="row clearIt">
 		  <div class="col-md-12 top-section">
-			<h1>SDC Management Dashboard</h1>
-			<p>View datasets and statistics filtered by science data center, date, and/or status.<br>
-			<a href="#">Learn more about how these metrics are calculated. </a></p>
-			 <p>Questions? Contact us at: <a href="mailto:sashaqanderson@gmail.com">sashaqanderson@gmail.com</a></p>
+            </br>
+			<h5>Filter Science Data Catalog datasets by center, status, and/or date.</h5>
+            <p>Note that an inactive status refers to datasets which are in the system, but not published yet. Questions? Contact us at: <a href="mailto:sashaqanderson@gmail.com">sashaqanderson@gmail.com</a><br>
 		  </div>
 		</div>
 		<!-- END SDC_Dashboard Image and Header Content -->
@@ -197,139 +193,78 @@ row = html.Div(
     [
         # START Layout for Data by
         html.Div(
-            [
-                dbc.Col(html.Div("Filter Datasets by:", className="explore-sb-row-h2",), lg=12),
+            [dbc.Col(dcc.Loading(id='loading-5',
+                   children=
+                   html.Div(html.Div(id='live-update-text1'), className="explore-sb-row-h2",
+                            )
+                   ), lg = 12),
                 html.Div(
                     [
+                        html.Div( 
+                        [html.Br(), 
                         html.Div(
-                        [
-                        #     html.Div(
-                        # className="explore-sb-box header-h3",
-                        #     ),
-                        html.Div(
-                            [html.Div('Organization of Interest:'),
+                            [html.Div('Select science center/program:'),
                                     dcc.Dropdown(
                                         id='sci_center',
                                         style={
                                             'height': '2px', 
-                                            # 'width': '100px', 
                                             'font-size': "90%",
                                             'min-height': '1px',
+                                            'text-align': 'left', 
                                             },
                                         options= [{'label': 'All Science Centers', 'value': 'All'}] + [{'label': str(item),'value': str(item)}
                                                   for item in sorted_SC],
-                                        value= 'All',
-                                        # persistence=True, 
-                                        # persistence_type = 'memory'
+                                        value='All',
                                         ),
-                            html.P(),
-                            html.Br(),                           
-                            dbc.FormGroup(
-                                [
-                                    dbc.Label("Status"),
+                            html.Br(), 
+                            html.Br(),
+                            html.Br(),
+                            html.Div([
+                                    dbc.Label("Filter by date when datasets were last harvested or updated:"),
                                     dbc.RadioItems(
                                         options=[
-                                            {"label": "All", "value": 'all_status'},
-                                            {"label": "Active", "value": 'active'},
-                                            {"label": "Inactive", "value": 'inactive'},
+                                            {"label": "Last Harvested", "value": 'last_harvest'},
+                                            {"label": "Last Updated", "value": 'last_update'},
+                                            
                                         ],
-                                        value='all_status',
-                                        id="status",
+                                        style = {'font-size':'17px', 'text-align': 'center', },
+                                        value='last_harvest',
+                                        id="date_type",
                                     ),
                                 ]
+                                ),
+                            html.Div(dcc.DatePickerRange(
+                                id='date-picker-range',
+                                min_date_allowed = date(1700, 1, 1),
+                                max_date_allowed = date.today(),
+                                initial_visible_month = date.today(),
+                                start_date = date(2000, 1, 1),
+                                end_date = date.today(),
+                            )
                             ),
-                            html.Div(id='output-container-button')
                             ],
-                        className="explore-sb-box header-h3",
+                        className="explore-sb-col header-h3",
                                  ),
                         ],
                         ),
                     ],
                     className="col-lg-6 col-md-6 col-sm-12",
                 ),
+                
+                
                 html.Div(
-                    [
-                        html.Div(
-                            [dbc.FormGroup(
-                                [
-                                    dbc.Label("Date type:"),
-                                    dbc.RadioItems(
-                                        options=[
-                                            {"label": "Beginning Date", "value": 'beg_date'},
-                                            {"label": "End Date", "value": 'end_date'},
-                                            {"label": "Last Updated", "value": 'last_update'},
-                                            {"label": "Last Harvest", "value": 'last_harvest'},
-                                        ],
-                                        style = {'font-size':'17px'},
-                                        value='beg_date',
-                                        id="date_type",
-                                    ),
-                                ],
+                        dcc.Graph(
+                            id='pie-graph-1',
+                            figure = go.Figure(data=[go.Pie(labels=value_counts.index, values=value_counts.values)]),
+                            config={'displayModeBar': False},
                             ),
-                        html.Div("Date range:"),
-                        html.Div(dcc.DatePickerRange(
-                            id='date-picker-range',
-                            min_date_allowed = date(1700, 1, 1),
-                            max_date_allowed = date.today(),
-                            initial_visible_month = date.today(),
-                            start_date = date(1700, 1, 1),
-                            end_date = date.today(),
-                        )
-                        ),
-                        html.Div(id='output-container-date-picker-range')],
-                            className="explore-sb-box header-h3",
-                        ),
-                    ],
                     className="col-lg-6 col-md-6 col-sm-12",
                 ),
             ],
             className="row clearIt bg-light explore-sb-row",
         ),
-        # END Layout for Data by
-        # START Layout for Select an Organization of Interest
-        html.Div(
-            [
-                dbc.Col(
-                    html.Div(
-                        "Dataset Count Results:",
-                        className="explore-sb-row-h2",
-                    ),
-                    lg=12,
-                ),
-                html.Div(
-                    [
-                        html.Div(
-                            [
-                                html.H3("Total Data Published"),
-                                html.Div(dcc.Loading(id='loading-1',
-                                                   children=
-                                                   html.Div(html.Div(id='live-update-text'), className="explore-sb-row-h2",))
-                                       , className="textHeader"),
-                            ],
-                            className="explore-sb-box header-h3",
-                        ),  
-                    ],
-                    className="col-lg-6 col-md-6 col-sm-12",
-                ),
-                html.Div(
-                    [
-                        html.Div(
-                            [
-                                html.H3("Total Active"),
-                                html.Div(dcc.Loading(id='loading-2',
-                                                   children=
-                                                   html.Div(html.Div(id='live-update-text3'), className="explore-sb-row-h2",))
-                                       , className="textHeader"),
-                            ],
-                            className="explore-sb-box header-h3",
-                        ),
-                    ],
-                    className="col-lg-6 col-md-6 col-sm-12",
-                ),
-            ],
-            className="row clearIt bg-light explore-sb-row",
-        ),
-        # END Layout for Select an Organization of Interest
+        # END Layout Filtering and Pie Chart
+        
     ]
 )
 
@@ -340,10 +275,6 @@ app.layout = html.Div(
         # START Layout for Tabbed Content
         dbc.Row(
             [
-                # dbc.Col(
-                #     html.Div("Select a Date Range", className="explore-sb-row-h2",),
-                #     width=12,
-                # ),
                 dcc.Tabs(
                     id="tabs-with-classes",
                     value="tab-1",
@@ -351,19 +282,13 @@ app.layout = html.Div(
                     className="custom-tabs-container",
                     children=[
                         dcc.Tab(
-                            label="Datatable",
+                            label="Data Table for Science Data Catalog Results",
                             value="tab-1",
                             className="custom-tab",
                             selected_className="custom-tab--selected",
                         ),
                         dcc.Tab(
-                            label="Status",
-                            value="tab-2",
-                            className="custom-tab",
-                            selected_className="custom-tab--selected",
-                        ),
-                        dcc.Tab(
-                            label="By Date",
+                            label="Dataset Count By Selected Dates",
                             value="tab-3",
                             className="custom-tab",
                             selected_className="custom-tab--selected",
@@ -387,44 +312,71 @@ app.layout = html.Div(
 def render_content(tab):
     if tab == "tab-1":
         return html.Div(
-            [
-                html.Div(dcc.Loading(id='loading-3',
+            [html.Div(
+            [html.Div(dcc.Loading(id='loading-3',
                    children=
-                   html.Div(html.Div(id='live-update-text5'), className="explore-sb-row-h2",
+                   html.Div(html.H4(id='live-update-text2'), className="align-left",
                             )
-                   ), className="center-date-range-text"
+                   ), className="align-left"
                          ),
+            ],
+            className="row clearIt bg-light explore-sb-row",
+        ),
+                html.Div(
+                    [dbc.FormGroup(
+                        [
+                        dbc.Label("Filter Data Table by:", style = {'font-size':'17px', 'text-align': 'left', }),
+                        dbc.RadioItems(
+                            options=[
+                                {"label": "All", "value": 'all_status'},
+                                {"label": "Active", "value": 'active'},
+                                {"label": "Inactive", "value": 'inactive'},
+                            ],
+                            style = {'font-size':'17px', 'text-align': 'left', },
+                            # labelStyle={'display': 'inline-block', 'text-align': 'left',},
+                            value='all_status',
+                            id="status",
+                        ),
+                    ]
+                ), 
+                    ],
+                    className="col-lg-6 col-md-6 col-sm-12",
+                ),
                 html.H4("Science Data Catalog Results", className="align-left"),
                 html.A(
                     "Download Data Table (CSV)", id = 'download-button',
-                    download = 'data.csv',
+                    download = 'SDC_results.csv',
                     href='',
                     target='_blank',
-                    # className="align-right",
+                    # className="align-left",
                 ),
                 dcc.Loading(id='loading-4',
-                        children=[html.Div(
+                        children=[html.Div(             
                 dash_table.DataTable(
                     id='datatable',
                     data=df.to_dict('records'),
                     columns=[
                     {"name": ["Status"], "id": "status"},
-                    {"name": ["Science Center"], "id": "datasource"},
+                    {"name": ["Science Center"], "id": "datasource", 'type': 'text'},
                     {"name": ["Citations"], "id": "citations"},
-                    {"name": ["DOI"], "id": "doi"},
+                    {"name": ["DOI"], "id": "link", "presentation":'markdown'},
+                    {"name": ["Identifier"], "id": "file_identifier"},
                     ],
                     style_cell_conditional=[
                         {'if': {'column_id': 'status'},
                           'width': '80px',
                           'textAlign': 'right'},
                         {'if': {'column_id': 'citations'},
-                          'width': '100px',
+                          'width': '85px',
                           'textAlign': 'center'},
                         {'if': {'column_id': 'datasource'},
-                          'width': '500px',
+                          'width': '400px',
                           'textAlign': 'center'},
-                        {'if': {'column_id': 'doi'},
-                          'width': '200px',
+                        {'if': {'column_id': 'link'},
+                          'width': '120px',
+                          'textAlign': 'center'},
+                        {'if': {'column_id': 'file_identifier'},
+                          'width': '300px',
                           'textAlign': 'center'},
                     ],
                     style_header= {
@@ -460,54 +412,28 @@ def render_content(tab):
                 'padding': '10px'
                 }
         ), 
-    elif tab == "tab-2":
-        return html.Div(
-            [
-                # html.P("Science Centers", className="center-date-range-text"),
-                html.Div(dcc.Loading(id='loading-5',
-                   children=
-                   html.Div(html.Div(id='live-update-text2'), className="explore-sb-row-h2",
-                            )
-                   ), className="center-date-range-text"
-                         ),
-                html.H4("Status - Active/Inactive"),
-                dcc.Graph(
-                    id='pie-graph-1',
-                    figure = go.Figure(data=[go.Pie(labels=value_counts.index, values=value_counts.values)])
-                    ),
-
-            ]
-        )
     elif tab == "tab-3":
         return html.Div(
             [
                 html.Div(dcc.Loading(id='loading-6',
                    children=
-                   html.Div(html.Div(id='live-update-text4'), className="explore-sb-row-h2",
+                   html.Div(html.Div(id='live-update-text3'), className="explore-sb-row-h2",
                             )
                    ), className="center-date-range-text"
                          ),
                 dcc.Graph(
                     id="example-graph-2",
-                    figure = px.bar(dfg, x=dfg.index, y="Count")
-                ),
-            ]
-        )
+                    figure = px.bar(dfg2, x="last_harvest", y="Count", color="status", labels={"last_harvest": "Last Harvested",
+                                                                          "last_update": "Last Updated"}),
+                    config={'displayModeBar': False}
+                    ),
+                ]
+            )
 
 #function to filter data for table
 def filter_data(sci_center, status, date_type, startdate, enddate):
     df1 = df.copy()
     #filter by date
-    if date_type == 'beg_date':
-        df1 = df1.reset_index().set_index('beg_date')
-        df1.index = pd.to_datetime(df1.index)
-        df1 = df1.loc[startdate: enddate]  
-        df1['beg_date'] = df1.index    
-    if date_type == 'end_date':
-        df1 = df1.reset_index().set_index('end_date')
-        df1.index = pd.to_datetime(df1.index)
-        df1 = df1.loc[startdate: enddate] 
-        df1['end_date'] = df1.index    
     if date_type == 'last_update':
         df1 = df1.reset_index().set_index('last_update')
         df1.index = pd.to_datetime(df1.index)
@@ -541,39 +467,6 @@ def filter_data(sci_center, status, date_type, startdate, enddate):
         if status == 'inactive':
             df2 = df2[df2['status']=='Inactive']
         return df2
-
-
-#return table count
-@app.callback(
-    Output('live-update-text', 'children'),
-    [Input('sci_center', 'value'),
-      Input('status', 'value'),
-      Input('date_type', 'value'), 
-      Input('date-picker-range', 'start_date'),
-      Input('date-picker-range', 'end_date')])
-def set_display_livedata(sci_center, status, date_type,  startd, endd):
-    #connect to database and obtain blood pressure where id=value
-    df3 = filter_data(sci_center, status, date_type, startd, endd)
-    if df3 is None:
-        return 0
-    else:
-        return len(df3)
-
-#return Active table count
-@app.callback(
-    Output('live-update-text3', 'children'),
-    [Input('sci_center', 'value'),
-      Input('status', 'value'),
-      Input('date_type', 'value'), 
-      Input('date-picker-range', 'start_date'),
-      Input('date-picker-range', 'end_date')])
-def set_display_livedata2(sci_center, status, date_type,  startd, endd):
-    #connect to database and obtain blood pressure where id=value
-    df3 = filter_data(sci_center, status, date_type, startd, endd)
-    if df3 is None:
-        return 0
-    else:
-        return len(df3[df3.status == 'Active'])
     
 #update datatable    
 @app.callback(
@@ -608,22 +501,22 @@ def update_download_link(data):
 #update pie chart
 @app.callback(Output('pie-graph-1', 'figure'), 
     [Input('sci_center', 'value'),
-      Input('status', 'value'),
       Input('date_type', 'value'), 
       Input('date-picker-range', 'start_date'),
       Input('date-picker-range', 'end_date')])
-def pie_status(sci_center, status, date_type,  startd, endd):
+def pie_status(sci_center, date_type,  startd, endd):
+    status = 'all_status'
     df6 = filter_data(sci_center, status, date_type, startd, endd)
     value_counts = df6.status.value_counts()
     trace1 = go.Pie(
                 labels = value_counts.index,
                 values= value_counts.values,)
     data = [trace1]
-    layout = go.Layout()
+    layout = go.Layout(title = 'Status: Active/Inactive', height = 400)
     fig = go.Figure(data=data, layout=layout)
     return fig
 
-#update graph by date
+#update graph for release by date
 @app.callback(Output('example-graph-2', 'figure'), 
     [Input('sci_center', 'value'),
       Input('status', 'value'),
@@ -633,33 +526,50 @@ def pie_status(sci_center, status, date_type,  startd, endd):
 def time_series(sci_center, status, date_type,  startd, endd):
     df7 = filter_data(sci_center, status, date_type, startd, endd)
     df7[date_type] = pd.to_datetime(df7[date_type])
-    dfg = df7.groupby(pd.Grouper(key=date_type, freq='1M')).count()
-    # dfg = df7.groupby('last_update').count()
-    dfg = dfg.rename(columns={"datasource": "Count"})
-    figure = px.bar(dfg, x=dfg.index, y="Count")
+    dfg2 = df7.set_index(date_type).groupby([pd.Grouper(freq='1W'), 'status']).count()
+    dfg2 = dfg2[['datasource']]
+    dfg2 = dfg2.rename(columns={"datasource": "Count"})
+    dfg2.reset_index(inplace = True)
+    figure = px.bar(dfg2, x="last_harvest", y="Count", color="status", labels={"last_harvest": "Last Harvested",
+                                                                          "last_update": "Last Updated"})
     return figure
 
-# update science center text tab 1
+# update text1
 @app.callback(
-    Output('live-update-text5', 'children'),
-    [Input('sci_center', 'value'),])
-def new_text1(value):
-    if value == "All":
-        return "All Science Centers"
-    return value
-
-# update science center text tab 2
+    Output('live-update-text1', 'children'),
+    [Input('sci_center', 'value')])
+def new_text1(sci_center):
+    if sci_center == 'All':
+        return 'Science Center/Progam: All'
+    if sci_center != 'All':
+        return 'Science Center/Progam: ' + sci_center
+    
+# update text2
 @app.callback(
     Output('live-update-text2', 'children'),
-    [Input('sci_center', 'value'),])
-def new_text2(value):
-    if value == "All":
-        return "All Science Centers"
-    return value
+    [Input('sci_center', 'value'),
+      Input('date_type', 'value'), 
+      Input('date-picker-range', 'start_date'),
+      Input('date-picker-range', 'end_date')])
+def new_text2(sci_center, date_type, startd, endd):
+    status = 'all_status'
+    df8 = filter_data(sci_center, status, date_type, startd, endd)
+    if df8 is None:
+        tot = 0
+        act = 0
+        inact = 0
+    else:
+        tot = len(df8)
+        act = len(df8[df8.status == 'Active'])
+        inact = len(df8[df8.status == 'Inactive'])
+    if sci_center == 'All':
+        return  'All science centers have a total of ' + str(tot) + ' datasets. There are ' + str(act) + ' active and ' + str(inact) + ' inactive for the selected dates.'
+    else:
+        return 'The ' + sci_center + ' has a total of ' + str(tot) + ' datasets. There are ' + str(act) + ' active and ' + str(inact) + ' inactive for the selected dates.'
 
 # update science center text tab 3
 @app.callback(
-    Output('live-update-text4', 'children'),
+    Output('live-update-text3', 'children'),
     [Input('sci_center', 'value'),
      Input('date_type', 'value')])
 def new_text3(sc, dat):
@@ -668,13 +578,12 @@ def new_text3(sc, dat):
     if dat == 'end_date':
         d = "by End Date"
     if dat == 'last_update':
-        d = "by Last Updated Date"
+        d = "by Date Last Updated"
     if dat == 'last_harvest':
-        d = "by Last harvest Date"
+        d = "by Date Last Harvested"
     if sc == "All":
         return "All Science Centers " + d
     return sc + ' ' + d
-
 
 if __name__ == "__main__":
     app.run_server(debug=True)

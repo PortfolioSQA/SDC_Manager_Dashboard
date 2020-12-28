@@ -8,6 +8,16 @@ Created on Tue Nov  3 09:19:32 2020
 import pandas as pd
 import random
 
+def display_links(df):
+    links = df['doi'].to_list()
+    rows = []
+    for x in links:
+        if x!= 'None':
+            link = f'[{x}](https://doi.org/' +str(x)[4:] + ')'
+            rows.append(link)
+        else: rows.append(x)
+    return rows
+    
 def load_data(harvest_db, rel_ident):
     #load sample data
     df1 = harvest_db.copy()
@@ -40,10 +50,13 @@ def load_data(harvest_db, rel_ident):
     result = df1.merge(df3, how = 'left', left_index=True, right_index=True)
     result.citations.fillna(0, inplace = True)
     result.datasource.fillna('Unknown', inplace = True)
-    result.to_csv('final_df.csv', index=False)
+    # result['doi'] = result['doi'].apply(make_clickable)
+    
     result.columns = ['file_identifier', 'datasource', 'doi', 'beg_date',
        'end_date', 'last_update', 'last_harvest', 'status',
        'citations']
+    result['link'] = display_links(result)
+    result.to_csv('final_df.csv', index=False)
     return result
 
 if __name__ == "__main__":
@@ -52,4 +65,5 @@ if __name__ == "__main__":
     df_sc = pd.read_csv('harvest_database_example2.csv')
     df_sc.set_index('file_identifier')
     df = load_data(df_sc, df_pub)
-    print(df.columns)
+
+
