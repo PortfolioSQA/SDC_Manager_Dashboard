@@ -480,14 +480,14 @@ def filter_data(sci_center, status, date_type, startdate, enddate):
 def table_selection(sci_center, status, date_type,  startd, endd):
     df4 = filter_data(sci_center, status, date_type, startd, endd)
     df4.reset_index(inplace = True)
-    if len(df4) != 0:
+    if df4 is not None:
         return df4.to_dict("records")
     else:
         return [{}]
 def update_selected_row_indices(sci_center, status, date_type,  startd, endd):
     df4 = filter_data(sci_center, status, date_type, startd, endd)
     df4.reset_index(inplace = True)
-    if len(df4) != 0:
+    if df4 is not None:
         return df4.to_dict("records")
     else:
         return [{}]
