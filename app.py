@@ -49,7 +49,7 @@ app.index_string = """
 <html>
     <head>
         {%metas%}
-        <title>{%title%}</title>      
+        <title>SDC Dashboard</title>      
         {%css%}
 	<link rel="icon" type="image/png" href="../assets/favicons/favicon-16x16.png" sizes="16x16">	
 	<link rel="icon" type="image/png" href="../assets/favicons/favicon-32x32.png" sizes="32x32">
@@ -362,7 +362,7 @@ def render_content(tab):
                     style_cell_conditional=[
                         {'if': {'column_id': 'status'},
                           'width': '80px',
-                          'textAlign': 'right'},
+                          'textAlign': 'center'},
                         {'if': {'column_id': 'citations'},
                           'width': '85px',
                           'textAlign': 'center'},
@@ -384,7 +384,9 @@ def render_content(tab):
                     style_cell={
                         'overflow': 'hidden',
                         'maxWidth': '60px',
-                        'height': 'auto'
+                        'height': 'auto',
+                        'fontSize':15, 
+                        'font-family':'sans-serif'
                     },
                     style_table={
                         'maxHeight': '600px',
@@ -396,6 +398,12 @@ def render_content(tab):
                         'height': 'auto',
                         'lineHeight': '15px'
                     },
+                    style_data_conditional=[
+                    {
+                        'if': {'row_index': 'odd'},
+                        'backgroundColor': 'rgb(248, 248, 248)'
+                        }
+                    ],
                     sort_action="native",
                     # sort_mode="multi",
                     )
@@ -572,10 +580,31 @@ def new_text2(sci_center, date_type, startd, endd):
         act = len(df8[df8.status == 'Active'])
         inact = len(df8[df8.status == 'Inactive'])
     if sci_center == 'All':
-        return  'All science centers have a total of ' + str(tot) + ' datasets. There are ' + str(act) + ' active and ' + str(inact) + ' inactive for the selected dates.'
+        summary = html.P(children=[
+            html.Span('All science centers have a total of '),
+            html.Strong(html.Big(str(tot))),
+            html.Span(' datasets. There are '),
+            html.Strong(html.Big(str(act))),
+            html.Span(' active and '),
+            html.Strong(html.Big(str(inact))),
+            html.Span(' inactive for the selected dates.'),
+            ])
+        return summary
+        #return  'All science centers have a total of ' + str(tot) + ' datasets. There are ' + str(act) + ' active and ' + str(inact) + ' inactive for the selected dates.'
     else:
-        return 'The ' + sci_center + ' has a total of ' + str(tot) + ' datasets. There are ' + str(act) + ' active and ' + str(inact) + ' inactive for the selected dates.'
-
+        summary = html.P(children=[
+            html.Span('The ' + sci_center + ' has a total of '),
+            html.Strong(html.Big(str(tot))),
+            html.Span(' datasets.'),
+            html.P(),
+            html.Span('There are '),
+            html.Strong(html.Big(str(act))),
+            html.Span(' active and '),
+            html.Strong(html.Big(str(inact))),
+            html.Span(' inactive for the selected dates.'),
+            ])
+        # return 'The ' + sci_center + ' has a total of ' + str(tot) + ' datasets. There are ' + str(act) + ' active and ' + str(inact) + ' inactive for the selected dates.'
+        return summary
 # update science center text tab 2
 @app.callback(
     Output('live-update-text3', 'children'),
