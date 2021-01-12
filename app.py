@@ -99,8 +99,8 @@ app.index_string = """
 		<div class="row clearIt">
 		  <div class="col-md-12 top-section">
             </br>
-			<h5>Filter Science Data Catalog datasets by center, status, and/or date.</h5>
-            <p>Note that an inactive status refers to datasets which are in the system, but not yet available. Questions? Contact us at: <a href="mailto:sashaqanderson@gmail.com">sashaqanderson@gmail.com</a><br>
+			<h5>Filter Science Data Catalog datasets by center, date, or status (active/inactive*).</h5>
+            <p>*Note that an inactive status refers to datasets which are in the system, but not yet available. Questions? Contact us at: <a href="mailto:sashaqanderson@gmail.com">sashaqanderson@gmail.com</a><br>
 		  </div>
 		</div>
 		<!-- END SDC_Dashboard Image and Header Content -->
